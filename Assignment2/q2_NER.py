@@ -26,7 +26,7 @@ class Config(object):
   early_stopping = 2
   dropout = 0.9
   lr = 0.0009
-  l2 = 0.001
+  l2 = 0.0005
   window_size = 3
   #
 
