@@ -22,12 +22,14 @@ class Config(object):
   batch_size = 64
   label_size = 5
   hidden_size = 100
-  max_epochs = 24 
+  max_epochs = 25
   early_stopping = 2
   dropout = 0.9
-  lr = 0.001
+  lr = 0.0009
   l2 = 0.001
   window_size = 3
+  #
+
 
 class NERModel(LanguageModel):
   """Implements a NER (Named Entity Recognition) model.
@@ -119,7 +121,10 @@ class NERModel(LanguageModel):
       feed_dict: The feed dictionary mapping from placeholders to values.
     """
     ### YOUR CODE HERE
-    feed_dict = {self.input_placeholder:input_batch, self.labels_placeholder: label_batch, self.dropout_placeholder:dropout}
+    if(label_batch is not None):
+     feed_dict = {self.input_placeholder:input_batch, self.labels_placeholder: label_batch, self.dropout_placeholder:dropout}
+    else:
+      feed_dict = {self.input_placeholder:input_batch, self.dropout_placeholder:dropout}
     ### END YOUR CODE
     return feed_dict
 
@@ -195,7 +200,7 @@ class NERModel(LanguageModel):
     with tf.variable_scope('Softmax'):
       U  = tf.get_variable('U', (self.config.hidden_size, self.config.label_size),tf.float32,init) 
       b2 = tf.get_variable('b2',(1,self.config.label_size),tf.float32,init)
-      output = tf.nn.tanh(tf.matmul(h,U)+b2)
+      output = tf.matmul(h,U)+b2
     
     output = tf.nn.dropout(output,self.dropout_placeholder)
 
@@ -242,6 +247,7 @@ class NERModel(LanguageModel):
     """
     ### YOUR CODE HERE
     train_op = tf.train.AdamOptimizer(self.config.lr).minimize(loss)
+    # train_op = tf.train.AdagradOptimizer(self.config.lr).minimize(loss)
     ### END YOUR CODE
     return train_op
 
@@ -362,13 +368,18 @@ def test_NER():
       best_val_loss = float('inf')
       best_val_epoch = 0
 
+      saver.restore(session, './weights/ner.weights2') # EDIT BY KRISHNKANT
+      # # print 'weignts inititlized loss:',train_loss.eval()
+      # confusion = calculate_confusion(config, predictions, model.y_dev)
+      # print_confusion(confusion, model.num_to_tag)
+
       session.run(init)
       for epoch in xrange(config.max_epochs):
         print 'Epoch {}'.format(epoch)
         start = time.time()
         ###
         train_loss, train_acc = model.run_epoch(session, model.X_train,
-                                                model.y_train)
+                                                model.y_train,verbose = False)
         val_loss, predictions = model.predict(session, model.X_dev, model.y_dev)
         print 'Training loss: {}'.format(train_loss)
         print 'Training acc: {}'.format(train_acc)
@@ -379,7 +390,7 @@ def test_NER():
           if not os.path.exists("./weights"):
             os.makedirs("./weights")
         
-          saver.save(session, './weights/ner.weights')
+          saver.save(session, './weights/ner.weights4')
         if epoch - best_val_epoch > config.early_stopping:
           break
         ###
@@ -387,7 +398,7 @@ def test_NER():
         print_confusion(confusion, model.num_to_tag)
         print 'Total time: {}'.format(time.time() - start)
       
-      saver.restore(session, './weights/ner.weights')
+      saver.restore(session, './weights/ner.weights4')
       print 'Test'
       print '=-=-='
       print 'Writing predictions to q2_test.predicted'

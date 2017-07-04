@@ -1,2 +1,2 @@
-model_checkpoint_path: "ner.weights"
-all_model_checkpoint_paths: "ner.weights"
+model_checkpoint_path: "ner.weights4"
+all_model_checkpoint_paths: "ner.weights4"
