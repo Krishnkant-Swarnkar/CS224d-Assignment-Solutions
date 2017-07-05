@@ -32,8 +32,8 @@ class Config(object):
   batch_size = 64
   embed_size = 50
   hidden_size = 100
-  num_steps = 1
-  max_epochs = 1
+  num_steps = 10
+  max_epochs = 25
   early_stopping = 2
   dropout = 0.9
   global_step = tf.Variable(0, trainable=False)
@@ -208,7 +208,7 @@ class RNNLM_Model(LanguageModel):
   
   def __init__(self, config):
     self.config = config
-    self.load_data(debug=True)
+    self.load_data(debug=False)
     self.add_placeholders()
     self.inputs = self.add_embedding()
     self.rnn_outputs = self.add_model(self.inputs)
@@ -351,7 +351,7 @@ def generate_text(session, model, config, starting_text='<eos>',
     feed_dict = {model.input_placeholder : [tokens[-1]], model.initial_state:state ,model.dropout_placeholder:1.0}
     y_pred, state = session.run([model.predictions,model.final_state],feed_dict)
     y_pred = y_pred[-1]
-    print "*"*20,'STEP',i
+    # print "*"*20,'STEP',i
     ### END YOUR CODE
     next_word_idx = sample(y_pred[0], temperature=temp)
     tokens.append([next_word_idx])
@@ -403,13 +403,13 @@ def test_RNNLM():
       if valid_pp < best_val_pp:
         best_val_pp = valid_pp
         best_val_epoch = epoch
-        saver.save(session, './ptb_rnnlm.weights')
+        saver.save(session, 'weights-rnnlm/ptb_rnnlm.weights')
       if epoch - best_val_epoch > config.early_stopping:
         break
       print 'Total time: {}'.format(time.time() - start)
     print 'Train PP: ',Tpp
     print 'Validation PP: ',Vpp
-    saver.restore(session, 'ptb_rnnlm.weights')
+    saver.restore(session, 'weights-rnnlm/ptb_rnnlm.weights')
     test_pp = model.run_epoch(session, model.encoded_test)
     print '=-=' * 5
     print 'Test perplexity: {}'.format(test_pp)
