@@ -204,7 +204,7 @@ class RNNLM_Model(LanguageModel):
   
   def __init__(self, config):
     self.config = config
-    self.load_data(debug=False)
+    self.load_data(debug=True)
     self.add_placeholders()
     self.inputs = self.add_embedding()
     self.rnn_outputs = self.add_model(self.inputs)
@@ -369,7 +369,7 @@ def test_RNNLM():
     scope.reuse_variables()
     gen_model = RNNLM_Model(gen_config)
 
-  loss = gen_model.add_loss_op(output)
+  loss = gen_model.add_loss_op(model.output)
   train_operation = tf.train.AdadeltaOptimizer(gen_config.lr).minimize(loss)
   init = tf.initialize_all_variables()
   saver = tf.train.Saver()

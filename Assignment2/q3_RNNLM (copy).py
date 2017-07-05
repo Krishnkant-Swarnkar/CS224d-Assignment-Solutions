@@ -110,7 +110,7 @@ class RNNLM_Model(LanguageModel):
     with tf.device('/cpu:0'):
       ### YOUR CODE HERE
       np.random.seed(8)
-      embeddings = tf.Variable(tf.random_uniform((len(self.vocab), self.config.embed_size),-1.0,1.0))
+      embeddings = tf.Variable(tf.random_uniform((len(self.vocab), self.config.embed_size),-1.0,1.0,seed = 8))
       embed =tf.nn.embedding_lookup(embeddings,self.input_placeholder)
       # print  '***** EEEEE:',embed
       inputs = [tf.squeeze(i) for i in tf.split(embed,self.config.num_steps,1)]  
@@ -141,7 +141,7 @@ class RNNLM_Model(LanguageModel):
     ### YOUR CODE HERE
     outputs = []
     np.random.seed(8)
-    init = tf.random_normal_initializer()
+    init = tf.random_normal_initializer(seed = 8)
 
     with tf.variable_scope('RNN-LM') as scope:
       scope.reuse_variables()
@@ -149,7 +149,8 @@ class RNNLM_Model(LanguageModel):
       b_2= tf.get_variable('bias-2',(1,len(self.vocab)),tf.float32,init)
       for t in xrange(self.config.num_steps):
         self.current_state = rnn_outputs[t]
-        out = tf.nn.softmax(tf.matmul(self.current_state,U)+b_2)
+        # out = tf.nn.softmax(tf.matmul(self.current_state,U)+b_2)
+        out = tf.matmul(self.current_state,U)+b_2
         outputs.append(out)
     ### END YOUR CODE
     return outputs
@@ -204,7 +205,7 @@ class RNNLM_Model(LanguageModel):
   
   def __init__(self, config):
     self.config = config
-    self.load_data(debug=False)
+    self.load_data(debug=True)
     self.add_placeholders()
     self.inputs = self.add_embedding()
     self.rnn_outputs = self.add_model(self.inputs)
@@ -266,7 +267,7 @@ class RNNLM_Model(LanguageModel):
 
     rnn_outputs = []
     np.random.seed(8)
-    init = tf.random_normal_initializer()
+    init = tf.random_normal_initializer(seed = 8)
 
     with tf.variable_scope('RNN-LM') as scope:
       self.initial_state = tf.zeros(shape = (self.config.batch_size, self.config.hidden_size) )

@@ -32,11 +32,14 @@ class Config(object):
   batch_size = 64
   embed_size = 50
   hidden_size = 100
-  num_steps = 10
-  max_epochs = 16
+  num_steps = 1
+  max_epochs = 1
   early_stopping = 2
   dropout = 0.9
-  lr = 0.001
+  global_step = tf.Variable(0, trainable=False)
+  starter_learning_rate = 0.005
+  lr = tf.train.exponential_decay(starter_learning_rate, global_step, 10000, 0.98, staircase=True)
+  # lr = 0.001
 
 class RNNLM_Model(LanguageModel):
 
@@ -53,11 +56,11 @@ class RNNLM_Model(LanguageModel):
     self.encoded_test = np.array(
         [self.vocab.encode(word) for word in get_ptb_dataset('test')],
         dtype=np.int32)
-    if debug:
-      num_debug = 1024
+    if debug:                                            
+      num_debug = 1024                                   
       self.encoded_train = self.encoded_train[:num_debug]
       self.encoded_valid = self.encoded_valid[:num_debug]
-      self.encoded_test = self.encoded_test[:num_debug]
+      self.encoded_test = self.encoded_test[:num_debug]  
 
   def add_placeholders(self):
     """Generate placeholder variables to represent the input tensors
@@ -110,10 +113,10 @@ class RNNLM_Model(LanguageModel):
     with tf.device('/cpu:0'):
       ### YOUR CODE HERE
       np.random.seed(8)
-      embeddings = tf.Variable(tf.random_uniform((len(self.vocab), self.config.embed_size),-1.0,1.0))
+      embeddings = tf.Variable(tf.random_uniform((len(self.vocab), self.config.embed_size),-1.0,1.0,seed = 8))
       embed =tf.nn.embedding_lookup(embeddings,self.input_placeholder)
       # print  '***** EEEEE:',embed
-      inputs = [tf.squeeze(i) for i in tf.split(embed,self.config.num_steps,1)]  
+      inputs = [tf.squeeze(i,[1]) for i in tf.split(embed,self.config.num_steps,1)]  
       # print  '***** INPUTS:',inputs
       
       ### END YOUR CODE
@@ -141,7 +144,7 @@ class RNNLM_Model(LanguageModel):
     ### YOUR CODE HERE
     outputs = []
     np.random.seed(8)
-    init = tf.random_normal_initializer()
+    init = tf.random_normal_initializer(seed = 8)
 
     with tf.variable_scope('RNN-LM') as scope:
       scope.reuse_variables()
@@ -149,7 +152,8 @@ class RNNLM_Model(LanguageModel):
       b_2= tf.get_variable('bias-2',(1,len(self.vocab)),tf.float32,init)
       for t in xrange(self.config.num_steps):
         self.current_state = rnn_outputs[t]
-        out = tf.nn.softmax(tf.matmul(self.current_state,U)+b_2)
+        # out = tf.nn.softmax(tf.matmul(self.current_state,U)+b_2)
+        out = tf.matmul(self.current_state,U)+b_2
         outputs.append(out)
     ### END YOUR CODE
     return outputs
@@ -204,7 +208,7 @@ class RNNLM_Model(LanguageModel):
   
   def __init__(self, config):
     self.config = config
-    self.load_data(debug=False)
+    self.load_data(debug=True)
     self.add_placeholders()
     self.inputs = self.add_embedding()
     self.rnn_outputs = self.add_model(self.inputs)
@@ -263,7 +267,7 @@ class RNNLM_Model(LanguageModel):
 
     rnn_outputs = []
     np.random.seed(8)
-    init = tf.random_normal_initializer()
+    init = tf.random_normal_initializer(seed = 8)
 
     with tf.variable_scope('RNN-LM') as scope:
       self.initial_state = tf.zeros(shape = (self.config.batch_size, self.config.hidden_size) )
@@ -341,16 +345,19 @@ def generate_text(session, model, config, starting_text='<eos>',
   """
   state = model.initial_state.eval()
   # Imagine tokens as a batch size of one, length of len(tokens[0])
-  tokens = [model.vocab.encode(word) for word in starting_text.split()]
+  tokens = [ [model.vocab.encode(word)] for word in starting_text.split()]
   for i in xrange(stop_length):
     ### YOUR CODE HERE
-    raise NotImplementedError
+    feed_dict = {model.input_placeholder : [tokens[-1]], model.initial_state:state ,model.dropout_placeholder:1.0}
+    y_pred, state = session.run([model.predictions,model.final_state],feed_dict)
+    y_pred = y_pred[-1]
+    print "*"*20,'STEP',i
     ### END YOUR CODE
     next_word_idx = sample(y_pred[0], temperature=temp)
-    tokens.append(next_word_idx)
-    if stop_tokens and model.vocab.decode(tokens[-1]) in stop_tokens:
+    tokens.append([next_word_idx])
+    if stop_tokens and model.vocab.decode(tokens[-1][0]) in stop_tokens:
       break
-  output = [model.vocab.decode(word_idx) for word_idx in tokens]
+  output = [model.vocab.decode(word_idx[0]) for word_idx in tokens]
   return output
 
 def generate_sentence(session, model, config, *args, **kwargs):
@@ -415,4 +422,3 @@ def test_RNNLM():
 
 if __name__ == "__main__":
     test_RNNLM()
-
